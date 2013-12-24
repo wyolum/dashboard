@@ -10,8 +10,9 @@ from numpy import random
 import time
 
 DEG = math.pi / 180.
-W = 800
-H = 600
+WIDTH = 800
+HEIGHT = 480
+
 MAX_HR = 200
 MIN_HR = 50
 UNITS = {'MIN': 60,
@@ -37,37 +38,10 @@ def html2rgb(s):
     bb = int(s[5:7], 16)
     return (rr, gg, bb)
     
-class Dial(pygame.sprite.Sprite):
-    """a speedometer dial"""
-    def __init__(self, center, radius, angle):
-        pygame.sprite.Sprite.__init__(self) #call Sprite initializer
-        self.center = center
-        self.radius = radius
-        self.angle = angle
-        self.image, self.rect = load_image('fist.bmp', -1)
-        self.punching = 0
-
-    def update(self):
-        "move the fist based on the mouse position"
-        pos = pygame.mouse.get_pos()
-        self.rect.midtop = pos
-        if self.punching:
-            self.rect.move_ip(5, 10)
-
-    def punch(self, target):
-        "returns true if the fist collides with the target"
-        if not self.punching:
-            self.punching = 1
-            hitbox = self.rect.inflate(-5, -5)
-            return hitbox.colliderect(target.rect)
-
-    def unpunch(self):
-        "called to pull the fist back"
-        self.punching = 0
-
 fuel = 1000
+
 class Widget:
-    def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255, name=""):
+    def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255):
         '''
         rect is where current widget live on parent
         rect[0] -- xleft
@@ -87,12 +61,9 @@ class Widget:
         self.rect = rect
         self.parent = parent
         self.parent.widgets.append(self)
-        self.name = name
+
     def render(self, surf):
         surf.blit(self.surf, (self.rect[0], self.rect[1]))
-        if self.name:
-            loc = self.surf.get_rect().centerx, self.surf.get_rect().height - 20
-            self.add_text(self.name, 24, loc)
         
     def add_text(self, text, fontsize, location=None, color=(0, 0, 255)):
         if self.text_surf is None:
@@ -171,7 +142,7 @@ def getCadence():
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
 
 class Progress(Widget):
-    def __init__(self, parent, rect, name, todo_color, done_color, prog=0., *args, **kw):
+    def __init__(self, parent, rect, todo_color, done_color, prog=0., *args, **kw):
         '''
         prog: progress from 0.0 to 1.0
         '''
@@ -179,7 +150,6 @@ class Progress(Widget):
         self.todo_color = todo_color
         self.done_color = done_color
         self.update(prog)
-        self.name = name
         
     def update(self, prog):
         if prog > 1:
@@ -194,10 +164,9 @@ class Progress(Widget):
         self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
 
 class Gauge(Widget):
-    def __init__(self, parent, center, name, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=(1, 1, 1), *args, **kw):
+    def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=(1, 1, 1), *args, **kw):
         rect = (center[0] - radius, center[1] - radius, 2 * radius, 2 * radius)
         Widget.__init__(self, parent, rect, colorkey=colorkey, fill=colorkey, *args, **kw)
-        self.name = name
         self.center = center
         self.radius = radius
         self.angles = angles
@@ -272,8 +241,8 @@ class Workout(cevent.CEvent):
         max_hr = max([Zone[z[2]][1] for z in self.intervals])
         min_hr = min([Zone[z[2]][0] for z in self.intervals])
         max_hr = 200
-        self.chart = Chart(self, (40, 418, 390, 50), 0, end, min_hr, max_hr)
-        self.hr_hist = Chart(self, (40, 418, 390, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=(1, 1, 1), fill=(1, 1, 1))
+        self.chart = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr)
+        self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=(1, 1, 1), fill=(1, 1, 1))
 
         for start, stop, zone in self.intervals:
             lo, hi, color = Zone[zone]
@@ -281,34 +250,34 @@ class Workout(cevent.CEvent):
             self.chart.addbar((color, (start, hi, stop - start, hi - lo)))
 
         ## create widgets.
-        self.progress = Progress(self, (175, 373, 640 - 2 * 175, 25), "TOGO", (0, 255, 255), (0, 0, 255))
-        self.speed = Gauge(self, (320, 240), "", 100, [140, 400], [0, 60])
-        self.speed_zone = Gauge(self, (320, 240), "Speed", 100, [140, 400], [0, 60])
-        self.hr_zones = Gauge(self, (100, 480 - 209), "HR", 90, [140, 400], [min_hr, max_hr], inner_radius=20)
+        self.progress = Progress(self, (255, 373, WIDTH - 2 * 255, 25), (0, 255, 255), (0, 0, 255))
+        self.speed = Gauge(self, (WIDTH / 2, HEIGHT / 2), 100, [140, 400], [0, 60])
+        self.speed_zone = Gauge(self, (WIDTH / 2, 240), 100, [140, 400], [0, 60])
+        self.hr_zones = Gauge(self, (180, HEIGHT - 209), 90, [140, 400], [min_hr, max_hr], inner_radius=20)
         for zone in Zone:
             zone = Zone[zone]
             self.hr_zones.arc(zone[0], zone[1], 80, 3, html2rgb(zone[2]))
-        self.hr_meter = Gauge(self, (100, 480 - 209), "HR", 85, [140, 400], [min_hr, max_hr], inner_radius=20)
-        self.cadence = Gauge(self, (640-100, 480-209), "", 75, [140, 400], [0, 130], inner_radius=20)
-        self.cadence_zone = Gauge(self, (640-100, 480-209), "Cadence", 85, [140, 400], [50, 130], inner_radius=20)
+        self.hr_meter = Gauge(self, (180, HEIGHT - 209), 85, [140, 400], [min_hr, max_hr], inner_radius=20)
+        self.cadence = Gauge(self, (WIDTH-180, HEIGHT-209), 75, [140, 400], [0, 130], inner_radius=20)
+        self.cadence_zone = Gauge(self, (WIDTH-180, HEIGHT-209), 85, [140, 400], [50, 130], inner_radius=20)
         self.cadence_zone.arc(90, 100, 80, 3, (0, 255, 0))
-        self.fuel = Gauge(self, (320, 480-402), 'Fuel', 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
+        self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
         self.fuel.surf = pygame.Surface((200, 75))
         self.fuel.surf.set_colorkey((1, 1, 1))
         self.fuel.surf.fill((1, 1, 1))
 
-        # self.text = Widget(self, (0, 55, 640, 40), fill=(0, 0, 0))
-        self._display_surf = pygame.display.set_mode((640,480), pygame.HWSURFACE)
+        # self.text = Widget(self, (0, 55, WIDTH, 40), fill=(0, 0, 0))
+        self._display_surf = pygame.display.set_mode((WIDTH,HEIGHT), pygame.HWSURFACE)
         self._running = True
         self._image_surf = pygame.image.load("WyoLum_racing.png").convert()
         self.start = time.time()
         self.interval_start = 0
         self.interval_num = 0
+        self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
         global fuel
 
-        self._display_surf.blit(self._image_surf,(0,0))
         
         ## update values
         rect = self._display_surf.get_rect()
@@ -341,19 +310,23 @@ class Workout(cevent.CEvent):
     def on_render(self):
         ## render children
         for wid in self.widgets:
+            # self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
             wid.render(self._display_surf)
-        
+            # pygame.display.update(wid.rect)
         ## black above and below fuel gauge
-        self._display_surf.fill((0,0,0), (234, 0, 175, 25))
+        # self._display_surf.fill((0,0,0), (WIDTH/2 - 175/2, 0, 175, 30))
         # self._display_surf.fill((0,0,0), (234, 50, 175, 30))
         pygame.display.flip()
-        
     def on_exit(self):
         self._running = False
 
     def on_cleanup(self):
         pygame.quit()
-     
+
+    def on_key_down(self, event):
+        if event.key == K_ESCAPE:
+            self._running = False
+        
     def on_execute(self):
         if self.on_init() == False:
             self._running = False

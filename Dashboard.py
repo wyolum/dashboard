@@ -39,7 +39,6 @@ def html2rgb(s):
     return (rr, gg, bb)
     
 fuel = 1000
-clock = pygame.time.Clock()
 
 class Widget:
     def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255, static=False):
@@ -141,7 +140,7 @@ def getHR():
     return 25 * math.sin(time.time() / 10.) + 175
 
 def getSpeed():
-    return 5 * math.cos(time.time() / 2.321) + 25
+    return 5 * math.cos(time.time() / 20.321) + 25
 def getCadence():
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
 
@@ -288,7 +287,6 @@ class Workout(cevent.CEvent):
         self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
-        clock.tick(60)
         global fuel
 
         
@@ -346,7 +344,7 @@ class Workout(cevent.CEvent):
     
         while( self._running and not self.done):
             self.on_render() ## only render once per second
-            for i in range(20): ## watch for events and updates
+            for i in range(200): ## watch for events and updates
                 self.on_loop()
                 for event in pygame.event.get():
                     self.on_event(event)
@@ -371,6 +369,5 @@ class Workout(cevent.CEvent):
 if __name__ == "__main__" :
     workout_string = '50 on 50 off::Z2 1*MIN, ' + ','.join(3 * ['Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 4*MIN'])
     workout_string = 'UNDER_OVER::Z2 15*MIN, Z3 5*MIN, ' + ','.join(7 * ['Z4a 1*MIN, Z3 1*MIN, Z4b 1*MIN, Z3 1*MIN, Z2 4*MIN'])    
-    workout_string = 'UNDER_OVER::Z2 15*SEC, Z3 5*SEC, ' + ','.join(7 * ['Z4a 1*SEC, Z3 1*SEC, Z4b 1*SEC, Z3 1*SEC, Z2 4*SEC'])    
     theApp = Workout(workout_string)
     theApp.on_execute()

@@ -39,6 +39,7 @@ def html2rgb(s):
     return (rr, gg, bb)
     
 fuel = 1000
+clock = pygame.time.Clock()
 
 class Widget:
     def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255, static=False):
@@ -283,6 +284,7 @@ class Workout(cevent.CEvent):
         self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
+        clock.tick(10)
         global fuel
 
         

@@ -29,7 +29,7 @@ Zone = {'1':(0, 145, '#000055'),
         '5a':(187, 192, '#ff0000'),
         '5b':(193, 195, '#ff0000'),
         '5c':(196, 250, '#ff0000')}
-
+COLORKEY = (1, 128, 1)
 zone_codes = '1 2 3 4a 4b 5a 5b 5c'.split()
 
 def html2rgb(s):
@@ -164,7 +164,7 @@ class Progress(Widget):
         self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
 
 class Gauge(Widget):
-    def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=(1, 1, 1), *args, **kw):
+    def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=COLORKEY, *args, **kw):
         rect = (center[0] - radius, center[1] - radius, 2 * radius, 2 * radius)
         Widget.__init__(self, parent, rect, colorkey=colorkey, fill=colorkey, *args, **kw)
         self.center = center
@@ -242,7 +242,7 @@ class Workout(cevent.CEvent):
         min_hr = min([Zone[z[2]][0] for z in self.intervals])
         max_hr = 200
         self.chart = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr)
-        self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=(1, 1, 1), fill=(1, 1, 1))
+        self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=COLORKEY, fill=COLORKEY)
 
         for start, stop, zone in self.intervals:
             lo, hi, color = Zone[zone]
@@ -263,8 +263,8 @@ class Workout(cevent.CEvent):
         self.cadence_zone.arc(90, 100, 80, 3, (0, 255, 0))
         self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
         self.fuel.surf = pygame.Surface((200, 75))
-        self.fuel.surf.set_colorkey((1, 1, 1))
-        self.fuel.surf.fill((1, 1, 1))
+        self.fuel.surf.set_colorkey(COLORKEY)
+        self.fuel.surf.fill(COLORKEY)
 
         # self.text = Widget(self, (0, 55, WIDTH, 40), fill=(0, 0, 0))
         self._display_surf = pygame.display.set_mode((WIDTH,HEIGHT), pygame.HWSURFACE)

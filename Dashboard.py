@@ -50,7 +50,6 @@ class Widget:
         rect[2] -- width
         rect[3] -- height
         '''
-        print self, rect
         self.surf = pygame.Surface((rect[2], rect[3]))
         self.text_surf = None
 
@@ -140,7 +139,7 @@ def getHR():
     return 25 * math.sin(time.time() / 10.) + 175
 
 def getSpeed():
-    return 25 * math.cos(time.time() / 2.321) + 25
+    return 5 * math.cos(time.time() / 2.321) + 25
 def getCadence():
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
 
@@ -253,8 +252,8 @@ class Workout(cevent.CEvent):
             self.chart.addbar((color, (start, hi, stop - start, hi - lo)))
 
         ## create widgets.
-        self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
         self.progress = Progress(self, (255, 373, WIDTH - 2 * 255, 25), (0, 255, 255), (0, 0, 255))
+        self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
         self.speed = Gauge(self, (WIDTH / 2, HEIGHT / 2), 100, [140, 400], [0, 60])
         self.hr_zones = Gauge(self, (180, HEIGHT - 209), 90, [140, 400], [min_hr, max_hr], inner_radius=20, static=True)
         for zone in Zone:
@@ -293,7 +292,7 @@ class Workout(cevent.CEvent):
         heartrate = getHR()
         speed = getSpeed()
         cadence = getCadence()
-        fuel -= .05
+        fuel -= 10
         now = time.time() - self.start
         interval = self.intervals[self.interval_num]
         duration = (interval[1] - interval[0])
@@ -366,6 +365,6 @@ class Workout(cevent.CEvent):
  
 if __name__ == "__main__" :
     workout_string = '50 on 50 off::Z2 1*MIN, ' + ','.join(3 * ['Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 4*MIN'])
-    workout_string = 'UNDER_OVER::Z2 15*SEC, Z3 5*SEC, ' + ','.join(7 * ['Z4a 1*SEC, Z3 1*SEC, Z4b 1*SEC, Z3 1*SEC, Z2 4*SEC'])    
+    workout_string = 'UNDER_OVER::Z2 15*MIN, Z3 5*MIN, ' + ','.join(7 * ['Z4a 1*MIN, Z3 1*MIN, Z4b 1*MIN, Z3 1*MIN, Z2 4*MIN'])    
     theApp = Workout(workout_string)
     theApp.on_execute()

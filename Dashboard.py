@@ -310,7 +310,7 @@ class Workout(cevent.CEvent):
     def on_render(self):
         ## render children
         for wid in self.widgets:
-            # self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
+            #  self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
             wid.render(self._display_surf)
             # pygame.display.update(wid.rect)
         ## black above and below fuel gauge

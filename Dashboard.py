@@ -41,7 +41,7 @@ def html2rgb(s):
 fuel = 1000
 
 class Widget:
-    def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255):
+    def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255, static=False):
         '''
         rect is where current widget live on parent
         rect[0] -- xleft
@@ -62,6 +62,7 @@ class Widget:
         self.rect = rect
         self.parent = parent
         self.parent.widgets.append(self)
+        self.static=static
 
     def render(self, surf):
         surf.blit(self.surf, (self.rect[0], self.rect[1]))
@@ -242,7 +243,7 @@ class Workout(cevent.CEvent):
         max_hr = max([Zone[z[2]][1] for z in self.intervals])
         min_hr = min([Zone[z[2]][0] for z in self.intervals])
         max_hr = 200
-        self.chart = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr)
+        self.chart = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, static=True)
         self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=COLORKEY, fill=COLORKEY)
 
         for start, stop, zone in self.intervals:
@@ -254,12 +255,12 @@ class Workout(cevent.CEvent):
         self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
         self.progress = Progress(self, (255, 373, WIDTH - 2 * 255, 25), (0, 255, 255), (0, 0, 255))
         self.speed = Gauge(self, (WIDTH / 2, HEIGHT / 2), 100, [140, 400], [0, 60])
-        self.hr_zones = Gauge(self, (180, HEIGHT - 209), 90, [140, 400], [min_hr, max_hr], inner_radius=20)
+        self.hr_zones = Gauge(self, (180, HEIGHT - 209), 90, [140, 400], [min_hr, max_hr], inner_radius=20, static=True)
         for zone in Zone:
             zone = Zone[zone]
             self.hr_zones.arc(zone[0], zone[1], 80, 3, html2rgb(zone[2]))
         self.hr_meter = Gauge(self, (180, HEIGHT - 209), 85, [140, 400], [min_hr, max_hr], inner_radius=20)
-        self.cadence_zones = Gauge(self, (WIDTH-180, HEIGHT-209), 85, [140, 400], [50, 130], inner_radius=20)
+        self.cadence_zones = Gauge(self, (WIDTH-180, HEIGHT-209), 85, [140, 400], [50, 130], inner_radius=20, static=True)
         self.cadence_zones.arc(90, 100, 80, 3, (0, 255, 0))
         self.cadence = Gauge(self, (WIDTH-180, HEIGHT-209), 75, [140, 400], [0, 130], inner_radius=20)
         self.fuel.surf = pygame.Surface((200, 75))
@@ -271,10 +272,10 @@ class Workout(cevent.CEvent):
         self._running = True
         self._image_surf = pygame.image.load("WyoLum_racing.png").convert()
 
-        ### put static widgets on image surf
-        self.chart.render(self._image_surf)
-        self.hr_zones.render(self._image_surf)
-        self.cadence_zones.render(self._image_surf)
+        ### put all static widgets on image surf
+        for wid in self.widgets:
+            if wid.static:
+                wid.render(self._image_surf)
         
         self.start = time.time()
         self.interval_start = 0
@@ -315,8 +316,9 @@ class Workout(cevent.CEvent):
     def on_render(self):
         ## render children
         for wid in self.widgets:
-            self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
-            wid.render(self._display_surf)
+            if not wid.static:
+                self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
+                wid.render(self._display_surf)
             # pygame.display.update(wid.rect)
         ## black above and below fuel gauge
         self._display_surf.fill((0,0,0), (WIDTH/2 - 175/2, 0, 175, 30))

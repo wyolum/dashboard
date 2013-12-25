@@ -288,7 +288,7 @@ class Workout(cevent.CEvent):
         self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
-        clock.tick(1)
+        clock.tick(60)
         global fuel
 
         
@@ -345,12 +345,12 @@ class Workout(cevent.CEvent):
             self._running = False
     
         while( self._running and not self.done):
-            for event in pygame.event.get():
-                self.on_event(event)
-            self.on_loop()
-            self.on_render()
+            self.on_render() ## only render once per second
+            for i in range(20): ## watch for events and updates
+                self.on_loop()
+                for event in pygame.event.get():
+                    self.on_event(event)
 
-        # self._display_surf.fill((128, 128, 128))
         pygame.display.flip()
         font = pygame.font.Font(None, 48)
         text = font.render("Workout Complete!", 1, (255, 0, 0))

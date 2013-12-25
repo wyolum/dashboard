@@ -348,7 +348,6 @@ class Workout(cevent.CEvent):
 
         # self._display_surf.fill((128, 128, 128))
         pygame.display.flip()
-        self._display_surf.blit(dimmer, (0, 0))
         font = pygame.font.Font(None, 48)
         text = font.render("Workout Complete!", 1, (255, 0, 0))
         textpos = text.get_rect()

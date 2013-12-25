@@ -63,9 +63,11 @@ class Widget:
         self.parent = parent
         self.parent.widgets.append(self)
         self.static=static
+        self.changed = True
 
     def render(self, surf):
         surf.blit(self.surf, (self.rect[0], self.rect[1]))
+        self.changed = False
         
     def add_text(self, text, fontsize, location=None, color=(0, 0, 255)):
         if self.text_surf is None:
@@ -151,19 +153,22 @@ class Progress(Widget):
         Widget.__init__(self, parent, rect, *args, **kw)
         self.todo_color = todo_color
         self.done_color = done_color
-        self.update(prog)
+        self.value = prog
+        self.update(self.value)
         
-    def update(self, prog):
-        if prog > 1:
-            prog = 1
-        if prog < 0:
-            prog = 0
-        self.prog = prog
-        d = self.rect[2] * (1 - self.prog)
-        self.surf.fill(self.todo_color, (0, 0, self.rect[2], self.rect[3]))
-        self.surf.fill(self.done_color, (0, 0, d, self.rect[3]))
-        percent = "%.0f%%" % ((1 - prog) * 100)
-        self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
+    def update(self, value):
+        if value > 1:
+            value = 1
+        if value < 0:
+            value = 0
+        if abs(value - self.value) > .01:
+            self.changed == True
+            self.value = value
+            d = self.rect[2] * (1 - self.value)
+            self.surf.fill(self.todo_color, (0, 0, self.rect[2], self.rect[3]))
+            self.surf.fill(self.done_color, (0, 0, d, self.rect[3]))
+            percent = "%.0f%%" % ((1 - value) * 100)
+            self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
 
 class Gauge(Widget):
     def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=COLORKEY, *args, **kw):
@@ -193,7 +198,7 @@ class Gauge(Widget):
                    self.radius + self.radius*math.sin(angle)),
                   (self.radius + self.dial_width/2 * math.sin(angle),
                    self.radius - self.dial_width/2 * math.cos(angle))]
-
+        
         self.surf.fill(self.colorkey)
         pygame.draw.polygon(self.surf, (0, 0, 255), points , 0)
         if self.inner_radius > 0:
@@ -283,7 +288,7 @@ class Workout(cevent.CEvent):
         self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
-        clock.tick(10)
+        clock.tick(1)
         global fuel
 
         
@@ -366,5 +371,6 @@ class Workout(cevent.CEvent):
 if __name__ == "__main__" :
     workout_string = '50 on 50 off::Z2 1*MIN, ' + ','.join(3 * ['Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 4*MIN'])
     workout_string = 'UNDER_OVER::Z2 15*MIN, Z3 5*MIN, ' + ','.join(7 * ['Z4a 1*MIN, Z3 1*MIN, Z4b 1*MIN, Z3 1*MIN, Z2 4*MIN'])    
+    workout_string = 'UNDER_OVER::Z2 15*SEC, Z3 5*SEC, ' + ','.join(7 * ['Z4a 1*SEC, Z3 1*SEC, Z4b 1*SEC, Z3 1*SEC, Z2 4*SEC'])    
     theApp = Workout(workout_string)
     theApp.on_execute()

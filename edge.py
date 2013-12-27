@@ -1,9 +1,12 @@
 import Adafruit_BBIO.GPIO as GPIO
 import time
-from numpy import diff
+from numpy import diff, median, nan, array
+SPEED_PIN = "P8_10"
+CADENCE_PIN = "P8_9"
+PINS = [SPEED_PIN, CADENCE_PIN]
 
-GPIO.setup("P8_9", GPIO.IN)
-GPIO.setup("P8_10", GPIO.IN)
+for pin in PINS:
+    GPIO.setup(pin, GPIO.IN)
 
 class Buff:
     def __init__(self, max_size=10):
@@ -15,20 +18,33 @@ class Buff:
 	self.data = self.data[-self.max_size:]
 
     def get(self):
-        return self.data[:]
+        out = self.data[:]
+        return out
 
-times = {'P8_9':Buff(),
-         'P8_10':Buff()}
+event_times = {'P8_9':Buff(),
+               'P8_10':Buff()}
 
 def cadence_cb(pin_id):
-    times[pin_id].append(time.time())
+    event_times[pin_id].append(time.time())
     
 GPIO.cleanup()
-for key in times:
+for key in event_times:
     GPIO.add_event_detect(key, GPIO.FALLING, cadence_cb, 0)
 
-while True:
-    for key in times:
-        print key, diff(times[key].get())
-    time.sleep(1)
+def get_duration(pin_id, min_dur=.1, shelf_life=5):
+    times = array(event_times[key].get())
+    times = times[time.time() - times < shelf_life]
+    deltas = diff(times)
+    deltas = deltas[deltas > min_dur] ## at least min_dur
+    if len(times) > 0:
+        out = median(deltas), times[-1]
+    else:
+        out = nan, nan
+    return out
+
+if __name__ == "__main__":
+    while True:
+        for key in event_times:
+            print key, get_duration(key)
+        time.sleep(1)
 

@@ -8,6 +8,7 @@ from pygame.locals import *
 import cevent
 from numpy import random
 import time
+import edge
 
 DEG = math.pi / 180.
 WIDTH = 800
@@ -141,9 +142,39 @@ def getHR():
     return 25 * math.sin(time.time() / 10.) + 175
 
 def getSpeed():
-    return 5 * math.cos(time.time() / 20.321) + 25
+    # print time.time() - getSpeed.last_time
+    if time.time() - getSpeed.last_time < 1:
+        out = getSpeed.last_speed
+    else:
+        D = 1 # meter approx
+        C = math.pi * D
+        dur, last_update = edge.get_duration(edge.SPEED_PIN)
+        if dur > 0 and time.time() - last_update < 5:
+            out = (C / dur) * (3600. / 1000.)
+            getSpeed.last_speed = out
+            getSpeed.last_time = time.time()
+        else:
+            out = 0
+    return out
+getSpeed.last_time = 0
+print edge.CADENCE_PIN, edge.SPEED_PIN
 def getCadence():
+    # print time.time() - getSpeed.last_time
+    if time.time() - getCadence.last_time < 1:
+        out = getCadence.last_speed
+    else:
+        dur, last_update = edge.get_duration(edge.CADENCE_PIN)
+        if dur > 0 and time.time() - last_update < 5:
+            print 'SPEED', edge.event_times[edge.SPEED_PIN].data
+            print 'CADEN', edge.event_times[edge.CADENCE_PIN].data
+            out = 60. / dur 
+            getCadence.last_speed = out
+            getCadence.last_time = time.time()
+        else:
+            out = 0
+    return out
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
+getCadence.last_time = 0
 
 class Progress(Widget):
     def __init__(self, parent, rect, todo_color, done_color, prog=0., *args, **kw):

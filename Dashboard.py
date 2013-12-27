@@ -22,13 +22,13 @@ MIN = UNITS['MIN']
 SEC = UNITS['SEC']
 HOUR = UNITS['HOUR']
 Zone = {'1':(0, 145, '#000055'),
-        '2':(146, 162, '#0000ff'),
-        '3':(163, 171, '#00ff00'),
-        '4a':(172, 178, '#880088'),
-        '4b':(179, 186, '#990000'),
-        '5a':(187, 192, '#ff0000'),
-        '5b':(193, 195, '#ff0000'),
-        '5c':(196, 250, '#ff0000')}
+        '2':(145, 162, '#0000ff'),
+        '3':(162, 171, '#00ff00'),
+        '4a':(171, 178, '#880088'),
+        '4b':(178, 186, '#990000'),
+        '5a':(186, 192, '#ff0000'),
+        '5b':(192, 195, '#ff0000'),
+        '5c':(195, 250, '#ff0000')}
 COLORKEY = (1, 128, 1)
 zone_codes = '1 2 3 4a 4b 5a 5b 5c'.split()
 
@@ -69,6 +69,7 @@ class Widget:
         self.changed = False
         
     def add_text(self, text, fontsize, location=None, color=(0, 0, 255)):
+        self.changed = True
         if self.text_surf is None:
             self.text_surf = pygame.Surface((self.rect[2], self.rect[3]))
             
@@ -80,7 +81,6 @@ class Widget:
         textpos.center = location
         self.surf.blit(text, textpos)
 
-        
 class Chart(Widget):
     def __init__(self, parent, rect, xmin, xmax, ymin, ymax, *args, **kw):
         Widget.__init__(self, parent, rect, *args, **kw)
@@ -94,7 +94,6 @@ class Chart(Widget):
         self.xmax = xmax
         self.ymin = ymin
         self.ymax = ymax
-
         self.bars = []
 
     def addline(self, color, xstart, ystart, xstop, ystop, thickness=1):
@@ -105,6 +104,7 @@ class Chart(Widget):
         start = (px, self.rect[3] - py)
         stop = (qx, self.rect[3] - qy)
         pygame.draw.line(self.surf, color, start, stop, thickness)
+        self.changed = True
 
     def addbar(self, bar):
         self.bars.append(bar)
@@ -170,7 +170,7 @@ class Progress(Widget):
             self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
 
 class Gauge(Widget):
-    def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, inner_radius=30, colorkey=COLORKEY, *args, **kw):
+    def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, dial_color=(0, 0, 255), inner_radius=30, colorkey=COLORKEY, *args, **kw):
         rect = (center[0] - radius, center[1] - radius, 2 * radius, 2 * radius)
         Widget.__init__(self, parent, rect, colorkey=colorkey, fill=colorkey, *args, **kw)
         self.center = center
@@ -181,6 +181,8 @@ class Gauge(Widget):
         self.inner_radius = inner_radius
         if value is not None:
             self.update(value)
+        self.dial_color = dial_color
+
     def val2angle(self, value):
         frac = float(value - self.values[0]) / (self.values[1] - self.values[0])
         if frac > 1.05:
@@ -199,7 +201,7 @@ class Gauge(Widget):
                    self.radius - self.dial_width/2 * math.cos(angle))]
         
         self.surf.fill(self.colorkey)
-        pygame.draw.polygon(self.surf, (0, 0, 255), points , 0)
+        pygame.draw.polygon(self.surf, self.dial_color, points , 0)
         if self.inner_radius > 0:
             pygame.draw.circle(self.surf, (0, 0, 0), [self.radius, self.radius], self.inner_radius)
 
@@ -208,7 +210,7 @@ class Gauge(Widget):
         draw a wedge behind the gauge
         '''
         pygame.draw.arc(self.surf, color, (self.radius - radius, self.radius-radius, 2 * radius, 2 * radius),
-                        -self.val2angle(maxval) - 3*DEG, -self.val2angle(minval) + 3 * DEG, thickness)
+                        -self.val2angle(maxval) - 1 * DEG, -self.val2angle(minval) + 1 * DEG, thickness)
         
     def render(self, surf):
         Widget.render(self, surf)
@@ -266,7 +268,7 @@ class Workout(cevent.CEvent):
         self.hr_meter = Gauge(self, (180, HEIGHT - 209), 85, [140, 400], [min_hr, max_hr], inner_radius=20)
         self.cadence_zones = Gauge(self, (WIDTH-180, HEIGHT-209), 85, [140, 400], [50, 130], inner_radius=20, static=True)
         self.cadence_zones.arc(90, 100, 80, 3, (0, 255, 0))
-        self.cadence = Gauge(self, (WIDTH-180, HEIGHT-209), 75, [140, 400], [0, 130], inner_radius=20)
+        self.cadence = Gauge(self, (WIDTH-180, HEIGHT-209), 75, [140, 400], [50, 130], inner_radius=20)
         self.fuel.surf = pygame.Surface((200, 75))
         self.fuel.surf.set_colorkey(COLORKEY)
         self.fuel.surf.fill(COLORKEY)
@@ -311,7 +313,18 @@ class Workout(cevent.CEvent):
         ## update widgets
         self.fuel.update(fuel)
         self.progress.done_color = html2rgb(Zone[interval[2]][2])
+        col = (0, 0, 255)
+        for z in zone_codes:
+            lo, hi, color = Zone[z]
+            if lo <= heartrate and heartrate < hi:
+                col = html2rgb(color)
+        self.hr_meter.dial_color = col
         self.hr_meter.update(heartrate)
+        
+        col = (0, 0, 255)
+        if 90 <= cadence and cadence < 100:
+            col = (0, 255, 0)
+        self.cadence.dial_color = col
         self.cadence.update(cadence)
         self.hr_hist.addbar(((255, 255, 255, 128), (now, heartrate, 0, heartrate)))
         self.progress.update(togo / duration)

@@ -8,6 +8,7 @@ from pygame.locals import *
 import cevent
 from numpy import random
 import time
+import edge
 
 DEG = math.pi / 180.
 WIDTH = 800
@@ -65,9 +66,10 @@ class Widget:
         self.changed = True
 
     def render(self, surf):
-        surf.blit(self.surf, (self.rect[0], self.rect[1]))
+        rect = surf.blit(self.surf, (self.rect[0], self.rect[1]))
         self.changed = False
-        
+        return rect
+
     def add_text(self, text, fontsize, location=None, color=(0, 0, 255)):
         self.changed = True
         if self.text_surf is None:
@@ -140,9 +142,39 @@ def getHR():
     return 25 * math.sin(time.time() / 10.) + 175
 
 def getSpeed():
-    return 5 * math.cos(time.time() / 20.321) + 25
+    # print time.time() - getSpeed.last_time
+    if time.time() - getSpeed.last_time < 1:
+        out = getSpeed.last_speed
+    else:
+        D = 1 # meter approx
+        C = math.pi * D
+        dur, last_update = edge.get_duration(edge.SPEED_PIN)
+        if dur > 0 and time.time() - last_update < 5:
+            out = (C / dur) * (3600. / 1000.)
+            getSpeed.last_speed = out
+            getSpeed.last_time = time.time()
+        else:
+            out = 0
+    return out
+getSpeed.last_time = 0
+print edge.CADENCE_PIN, edge.SPEED_PIN
 def getCadence():
+    # print time.time() - getSpeed.last_time
+    if time.time() - getCadence.last_time < 1:
+        out = getCadence.last_speed
+    else:
+        dur, last_update = edge.get_duration(edge.CADENCE_PIN)
+        if dur > 0 and time.time() - last_update < 5:
+            print 'SPEED', edge.event_times[edge.SPEED_PIN].data
+            print 'CADEN', edge.event_times[edge.CADENCE_PIN].data
+            out = 60. / dur 
+            getCadence.last_speed = out
+            getCadence.last_time = time.time()
+        else:
+            out = 0
+    return out
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
+getCadence.last_time = 0
 
 class Progress(Widget):
     def __init__(self, parent, rect, todo_color, done_color, prog=0., *args, **kw):
@@ -212,9 +244,6 @@ class Gauge(Widget):
         pygame.draw.arc(self.surf, color, (self.radius - radius, self.radius-radius, 2 * radius, 2 * radius),
                         -self.val2angle(maxval) - 1 * DEG, -self.val2angle(minval) + 1 * DEG, thickness)
         
-    def render(self, surf):
-        Widget.render(self, surf)
-
 def parse_workout(s):
     name, s = s.split("::")
     intervals = [x.strip()  for x in s.lower().split(',')]
@@ -335,12 +364,13 @@ class Workout(cevent.CEvent):
         for wid in self.widgets:
             if not wid.static:
                 self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
-                wid.render(self._display_surf)
+                rect = wid.render(self._display_surf)
+                pygame.display.update(rect)
             # pygame.display.update(wid.rect)
         ## black above and below fuel gauge
         self._display_surf.fill((0,0,0), (WIDTH/2 - 175/2, 0, 175, 30))
         # self._display_surf.fill((0,0,0), (234, 50, 175, 30))
-        pygame.display.flip()
+        # pygame.display.flip()
     def on_exit(self):
         self._running = False
 
@@ -357,7 +387,7 @@ class Workout(cevent.CEvent):
     
         while( self._running and not self.done):
             self.on_render() ## only render once per second
-            for i in range(200): ## watch for events and updates
+            for i in range(100): ## watch for events and updates
                 self.on_loop()
                 for event in pygame.event.get():
                     self.on_event(event)
@@ -382,5 +412,6 @@ class Workout(cevent.CEvent):
 if __name__ == "__main__" :
     workout_string = '50 on 50 off::Z2 1*MIN, ' + ','.join(3 * ['Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 50,Z4b 50, Z2 4*MIN'])
     workout_string = 'UNDER_OVER::Z2 15*MIN, Z3 5*MIN, ' + ','.join(7 * ['Z4a 1*MIN, Z3 1*MIN, Z4b 1*MIN, Z3 1*MIN, Z2 4*MIN'])    
+    workout_string = 'UNDER_OVER::Z2 15*SEC, Z3 5*SEC, ' + ','.join(7 * ['Z4a 1*SEC, Z3 1*SEC, Z4b 1*SEC, Z3 1*SEC, Z2 4*SEC'])    
     theApp = Workout(workout_string)
     theApp.on_execute()

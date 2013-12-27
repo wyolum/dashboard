@@ -1,6 +1,7 @@
 '''
 based on przemoli-pygametutorial-540433c50ffc
 '''
+import serial
 import time
 import math
 import pygame
@@ -43,7 +44,7 @@ for key in event_times:
     GPIO.add_event_detect(key, GPIO.FALLING, pin_change_cb, 0)
 
 def get_duration(pin_id, min_dur=.1, shelf_life=5):
-    times = array(event_times[key].get())
+    times = array(event_times[pin_id].get())
     times = times[time.time() - times < shelf_life]
     deltas = diff(times)
     deltas = deltas[deltas > min_dur] ## at least min_dur
@@ -182,40 +183,107 @@ class Chart(Widget):
         # print xywh, out, self.rect
         return out
 
-def getHR():
-    return 25 * math.sin(time.time() / 10.) + 175
+port = '/dev/ttyUSB0'
 
-def getSpeed():
-    # print time.time() - getSpeed.last_time
-    if time.time() - getSpeed.last_time < 1:
-        out = getSpeed.last_speed
-    else:
-        D = 1 # meter approx
-        C = math.pi * D
-        dur, last_update = get_duration(SPEED_PIN)
-        if dur > 0 and time.time() - last_update < 5:
-            out = (C / dur) * (3600. / 1000.)
-            getSpeed.last_speed = out
-            getSpeed.last_time = time.time()
+def findPolar():
+    import glob
+    for port in glob.glob("/dev/ttyUSB*"):
+        ser = serial.Serial(port, baudrate=9600, timeout=.05)
+	ser.write("V" + chr(13))
+        ser.read(8)
+
+try:
+    ser = serial.Serial(port, baudrate=9600, timeout=.1)
+except Exception, e:
+    print 'No heartrate monitor detected', e
+    ser = None
+
+def readline():
+    return ser.read(100)
+
+def fast_readline():
+    out = []
+    c = 0
+    while c and c != '\r':
+        c = ser.read(1)
+        out.append(c)
+    return ''.join(out)
+
+class FreshFish:
+    '''
+    Keep result around for specified time.  Refresh when fish goes bad
+    '''
+    def __init__(self, shelf_life=1):
+        self.shelf = shelf_life
+        self.last_time = 0
+        self.last_result = None
+
+    def __call__(self, f):
+        def out():
+            if time.time() - self.last_time < self.shelf:
+                res = self.last_result
+            else:
+                res = f()
+                self.last_time = time.time()
+                self.last_result = res
+            return res
+        return out
+
+@FreshFish(2)
+def getHR():
+    if ser:
+        ser.write('G1' + chr(13))
+        res = readline()
+        if len(res) > 5:
+            out = int(res.split()[2])
         else:
             out = 0
+    else:
+        out = 0
+    print 'hr', out
+    return out
+
+class ExpFilterDeco:
+    '''
+    An exponential filter decorator for the getSpeed and getCadence functions.
+    
+    return alpha * f + (1 - alpha) * last_f
+    '''
+    def __init__(self, alpha):
+        self.alpha = alpha
+        self.last = [None]
+    def __call__(self, f):
+        def out():
+            out = f()
+            if self.last[0] is not None:
+                out = out * self.alpha + self.last[0] * (1 - self.alpha)
+            self.last[0] = out
+            return out
+        return out
+
+@ExpFilterDeco(.05)
+def getSpeed():
+    D = 1 # meter approx
+    C = math.pi * D
+    dur, last_update = get_duration(SPEED_PIN)
+    if dur > 0 and time.time() - last_update < 5:
+        out = (C / dur) * (3600. / 1000.)
+        getSpeed.last_speed = out
+        getSpeed.last_time = time.time()
+    else:
+        out = 0
     return out
 getSpeed.last_time = 0
 
+@ExpFilterDeco(.001)
 def getCadence():
-    # print time.time() - getSpeed.last_time
-    if time.time() - getCadence.last_time < 1:
-        out = getCadence.last_speed
+    dur, last_update = get_duration(CADENCE_PIN)
+    if dur > 0 and time.time() - last_update < 5:
+        out = 60. / dur 
+        getCadence.last_speed = out
+        getCadence.last_time = time.time()
     else:
-        dur, last_update = get_duration(CADENCE_PIN)
-        if dur > 0 and time.time() - last_update < 5:
-            print 'SPEED', event_times[SPEED_PIN].data
-            print 'CADEN', event_times[CADENCE_PIN].data
-            out = 60. / dur 
-            getCadence.last_speed = out
-            getCadence.last_time = time.time()
-        else:
-            out = 0
+        out = 0
     return out
     return 90 + 30 * math.cos(time.time() / 7.123 + math.pi/3)
 getCadence.last_time = 0
@@ -338,7 +406,7 @@ class Workout(cevent.CEvent):
         for zone in Zone:
             zone = Zone[zone]
             self.hr_zones.arc(zone[0], zone[1], 80, 3, html2rgb(zone[2]))
-        self.hr_meter = Gauge(self, (180, HEIGHT - 209), 85, [140, 400], [min_hr, max_hr], inner_radius=20)
+        self.hr_meter = Gauge(self, (180, HEIGHT - 209), 85, [140, 400], [50, max_hr], inner_radius=20)
         self.cadence_zones = Gauge(self, (WIDTH-180, HEIGHT-209), 85, [140, 400], [50, 130], inner_radius=20, static=True)
         self.cadence_zones.arc(90, 100, 80, 3, (0, 255, 0))
         self.cadence = Gauge(self, (WIDTH-180, HEIGHT-209), 75, [140, 400], [50, 130], inner_radius=20)

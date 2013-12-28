@@ -13,7 +13,7 @@ import time
 try:
     import Adafruit_BBIO.GPIO as GPIO
     BBB = True
-else:
+except:
     BBB = False
 import time
 from numpy import diff, median, nan, array
@@ -237,7 +237,7 @@ class FreshFish:
 
 @FreshFish(2)
 def getHR():
-    if ser:
+    if BBB and ser:
         ser.write('G1' + chr(13))
         res = readline()
         if len(res) > 5:
@@ -245,8 +245,7 @@ def getHR():
         else:
             out = 0
     else:
-        out = 0
-    print 'hr', out
+        out = 100
     return out
 
 class ExpFilterDeco:
@@ -395,15 +394,17 @@ class Workout(cevent.CEvent):
         end = self.intervals[-1][1]
         max_hr = max([Zone[z[2]][1] for z in self.intervals])
         min_hr = min([Zone[z[2]][0] for z in self.intervals])
+        min_hr = 50
         max_hr = 200
-        self.chart = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, static=True)
+        print min_hr, max_hr
+        self.chart   = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, static=True)
         self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=COLORKEY, fill=COLORKEY)
 
         for start, stop, zone in self.intervals:
             lo, hi, color = Zone[zone]
             color = html2rgb(color)
             self.chart.addbar((color, (start, hi, stop - start, hi - lo)))
-
+            
         ## create widgets.
         self.progress = Progress(self, (255, 373, WIDTH - 2 * 255, 25), (0, 255, 255), (0, 0, 255))
         self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)

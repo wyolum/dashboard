@@ -10,15 +10,20 @@ import cevent
 from numpy import random
 import time
 
-import Adafruit_BBIO.GPIO as GPIO
+try:
+    import Adafruit_BBIO.GPIO as GPIO
+    BBB = True
+else:
+    BBB = False
 import time
 from numpy import diff, median, nan, array
 SPEED_PIN = "P8_10"
 CADENCE_PIN = "P8_9"
 PINS = [SPEED_PIN, CADENCE_PIN]
 
-for pin in PINS:
-    GPIO.setup(pin, GPIO.IN)
+if BBB:
+    for pin in PINS:
+        GPIO.setup(pin, GPIO.IN)
 
 class Buff:
     def __init__(self, max_size=10):
@@ -39,9 +44,10 @@ event_times = {'P8_9':Buff(),
 def pin_change_cb(pin_id):
     event_times[pin_id].append(time.time())
     
-GPIO.cleanup()
-for key in event_times:
-    GPIO.add_event_detect(key, GPIO.FALLING, pin_change_cb, 0)
+if BBB:
+    GPIO.cleanup()
+    for key in event_times:
+        GPIO.add_event_detect(key, GPIO.FALLING, pin_change_cb, 0)
 
 def get_duration(pin_id, min_dur=.1, shelf_life=5):
     times = array(event_times[pin_id].get())

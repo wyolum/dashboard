@@ -75,7 +75,7 @@ UNITS = {'MIN': 60,
 MIN = UNITS['MIN']
 SEC = UNITS['SEC']
 HOUR = UNITS['HOUR']
-Zone = {'1':(50, 145, '#000055'),
+Zone = {'1':(50, 145, '#00ffff'),
         '2':(145, 162, '#0000ff'),
         '3':(162, 171, '#00ff00'),
         '4a':(171, 178, '#880088'),
@@ -222,6 +222,23 @@ def fast_readline():
         out.append(c)
     return ''.join(out)
 
+class ExpFilterDeco:
+    '''
+    An exponential filter decorator for the getSpeed and getCadence functions.
+    
+    return alpha * f + (1 - alpha) * last_f
+    '''
+    def __init__(self, alpha):
+        self.alpha = alpha
+        self.last = [None]
+    def __call__(self, f):
+        def out():
+            out = f()
+            if self.last[0] is not None:
+                out = out * self.alpha + self.last[0] * (1 - self.alpha)
+            self.last[0] = out
+            return out
+        return out
 class FreshFish:
     '''
     Keep result around for specified time.  Refresh when fish goes bad
@@ -242,6 +259,7 @@ class FreshFish:
             return res
         return out
 
+@ExpFilterDeco(.01)
 @FreshFish(2)
 def getHR():
     if BBB and ser:
@@ -255,25 +273,7 @@ def getHR():
         out = 150 + 50 * math.sin(time.time() / 5)
     return out
 
-class ExpFilterDeco:
-    '''
-    An exponential filter decorator for the getSpeed and getCadence functions.
-    
-    return alpha * f + (1 - alpha) * last_f
-    '''
-    def __init__(self, alpha):
-        self.alpha = alpha
-        self.last = [None]
-    def __call__(self, f):
-        def out():
-            out = f()
-            if self.last[0] is not None:
-                out = out * self.alpha + self.last[0] * (1 - self.alpha)
-            self.last[0] = out
-            return out
-        return out
-
-@ExpFilterDeco(.05)
+@ExpFilterDeco(.01)
 def getSpeed():
     D = 1 # meter approx
     C = math.pi * D
@@ -287,7 +287,7 @@ def getSpeed():
     return out
 getSpeed.last_time = 0
 
-@ExpFilterDeco(.001)
+@ExpFilterDeco(.01)
 def getCadence():
     dur, last_update = get_duration(CADENCE_PIN)
     if dur > 0 and time.time() - last_update < 5:
@@ -513,7 +513,7 @@ class Workout(cevent.CEvent):
         pygame.quit()
 
     def on_key_down(self, event):
-        if event.key == K_ESCAPE:
+        if event.key == K_ESCAPE or event.key == K_LEFT:
             self._running = False
         
     def on_execute(self):

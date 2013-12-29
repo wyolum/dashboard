@@ -10,6 +10,8 @@ import cevent
 from numpy import random
 import time
 
+clock = pygame.time.Clock()
+
 try:
     import Adafruit_BBIO.GPIO as GPIO
     BBB = True
@@ -73,14 +75,14 @@ UNITS = {'MIN': 60,
 MIN = UNITS['MIN']
 SEC = UNITS['SEC']
 HOUR = UNITS['HOUR']
-Zone = {'1':(0, 145, '#000055'),
+Zone = {'1':(50, 145, '#000055'),
         '2':(145, 162, '#0000ff'),
         '3':(162, 171, '#00ff00'),
         '4a':(171, 178, '#880088'),
         '4b':(178, 186, '#990000'),
         '5a':(186, 192, '#ff0000'),
         '5b':(192, 195, '#ff0000'),
-        '5c':(195, 250, '#ff0000')}
+        '5c':(195, 196, '#ff0000')}
 COLORKEY = (1, 128, 1)
 zone_codes = '1 2 3 4a 4b 5a 5b 5c'.split()
 
@@ -88,10 +90,8 @@ def html2rgb(s):
     rr = int(s[1:3], 16)
     gg = int(s[3:5], 16)
     bb = int(s[5:7], 16)
-    return (rr, gg, bb)
+    return [rr, gg, bb, 255]
     
-fuel = 1000
-
 class Widget:
     def __init__(self, parent, rect, colorkey=None, fill=(0, 0, 0), alpha=255, static=False):
         '''
@@ -193,16 +193,23 @@ port = '/dev/ttyUSB0'
 
 def findPolar():
     import glob
+    out = None
     for port in glob.glob("/dev/ttyUSB*"):
         ser = serial.Serial(port, baudrate=9600, timeout=.05)
 	ser.write("V" + chr(13))
-        ser.read(8)
-
-try:
-    ser = serial.Serial(port, baudrate=9600, timeout=.1)
-except Exception, e:
-    print 'No heartrate monitor detected', e
-    ser = None
+        line = ser.read(8).split()
+        if len(line) == 2:
+            try:
+                int(line[0])
+                int(line[1])
+                out = ser
+                break
+            except:
+                continue
+    return out        
+ser = findPolar()
+if ser is None:
+    print 'No heartrate monitor detected'
 
 def readline():
     return ser.read(100)
@@ -245,7 +252,7 @@ def getHR():
         else:
             out = 0
     else:
-        out = 100
+        out = 150 + 50 * math.sin(time.time() / 5)
     return out
 
 class ExpFilterDeco:
@@ -388,26 +395,29 @@ class Workout(cevent.CEvent):
         self._image_surf = None
         self.widgets = []
         self.done = False
+        self.beats = 0
+        self.target_beats = 1000. ## avoid / by zero
+        self.last_loop_time = None
 
     def on_init(self):
         pygame.init()
         end = self.intervals[-1][1]
-        max_hr = max([Zone[z[2]][1] for z in self.intervals])
-        min_hr = min([Zone[z[2]][0] for z in self.intervals])
-        min_hr = 50
-        max_hr = 200
-        print min_hr, max_hr
+        min_hr = min([Zone[z][0] for z in Zone])
+        max_hr = max([Zone[z][1] for z in Zone])
+
         self.chart   = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, static=True)
         self.hr_hist = Chart(self, (40, 418, 570, 50), 0, end, min_hr, max_hr, alpha=128, colorkey=COLORKEY, fill=COLORKEY)
 
+        self.target_beats = 0 ## sum up target beats
         for start, stop, zone in self.intervals:
             lo, hi, color = Zone[zone]
             color = html2rgb(color)
+            self.target_beats += ((stop - start) * (hi + lo) / 2.) / 60.
             self.chart.addbar((color, (start, hi, stop - start, hi - lo)))
-            
+
         ## create widgets.
         self.progress = Progress(self, (255, 373, WIDTH - 2 * 255, 25), (0, 255, 255), (0, 0, 255))
-        self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1000], dial_width=5, inner_radius=0)
+        self.fuel = Gauge(self, (WIDTH / 2, HEIGHT - 402), 100, [210, 330], [0, 1.], dial_width=5, inner_radius=0)
         self.speed = Gauge(self, (WIDTH / 2, HEIGHT / 2), 100, [140, 400], [0, 60])
         self.hr_zones = Gauge(self, (180, HEIGHT - 209), 90, [140, 400], [min_hr, max_hr], inner_radius=20, static=True)
         for zone in Zone:
@@ -437,46 +447,51 @@ class Workout(cevent.CEvent):
         self._display_surf.blit(self._image_surf,(0,0))
 
     def on_loop(self):
-        global fuel
+        if not self.done:
+            interval = self.intervals[self.interval_num]
+            ## update values
+            rect = self._display_surf.get_rect()
+            heartrate = getHR()
+            if self.last_loop_time:
+                dt = time.time() - self.last_loop_time
+                self.beats += dt * heartrate / 60.
+                fuel_remaining = 1 - self.beats / self.target_beats
+                self.fuel.update(fuel_remaining)
+            speed = getSpeed()
+            cadence = getCadence()
+            now = time.time() - self.start
+            duration = (interval[1] - interval[0])
+            togo = self.interval_start + duration - now
+            if togo <= 0:
+                self.interval_num += 1
+                self.interval_start = now
+                if self.interval_num >= len(self.intervals) :
+                    self.done = True
 
-        
-        ## update values
-        rect = self._display_surf.get_rect()
-        heartrate = getHR()
-        speed = getSpeed()
-        cadence = getCadence()
-        fuel -= 10
-        now = time.time() - self.start
-        interval = self.intervals[self.interval_num]
-        duration = (interval[1] - interval[0])
-        togo = self.interval_start + duration - now
-        if togo <= 0:
-            self.interval_num += 1
-            self.interval_start = now
-            if self.interval_num >= len(self.intervals) :
-                self.done = True
-                
-            
 
-        ## update widgets
-        self.fuel.update(fuel)
-        self.progress.done_color = html2rgb(Zone[interval[2]][2])
-        col = (0, 0, 255)
-        for z in zone_codes:
-            lo, hi, color = Zone[z]
-            if lo <= heartrate and heartrate < hi:
-                col = html2rgb(color)
-        self.hr_meter.dial_color = col
-        self.hr_meter.update(heartrate)
-        
-        col = (0, 0, 255)
-        if 90 <= cadence and cadence < 100:
-            col = (0, 255, 0)
-        self.cadence.dial_color = col
-        self.cadence.update(cadence)
-        self.hr_hist.addbar(((255, 255, 255, 128), (now, heartrate, 0, heartrate)))
-        self.progress.update(togo / duration)
-        self.speed.update(speed)
+
+            ## update widgets
+            self.progress.done_color = html2rgb(Zone[interval[2]][2])
+            self.progress.todo_color = [c/2 for c in self.progress.done_color]
+            col = [255, 0, 0, 255]
+            for z in zone_codes:
+                lo, hi, color = Zone[z]
+                if lo <= heartrate and heartrate < hi:
+                    col = html2rgb(color)
+            hr_color = col
+            self.hr_meter.dial_color = hr_color
+            self.hr_meter.update(heartrate)
+
+            col = (0, 0, 255)
+            if 90 <= cadence and cadence < 100:
+                col = (0, 255, 0)
+            self.cadence.dial_color = col
+            self.cadence.update(cadence)
+            hr_color[3] = 128
+            self.hr_hist.addbar((hr_color, (now, heartrate, 0, heartrate)))
+            self.progress.update(togo / duration)
+            self.speed.update(speed)
+            self.last_loop_time = time.time()
 
     def on_render(self):
         ## render children
@@ -485,9 +500,10 @@ class Workout(cevent.CEvent):
                 self._display_surf.blit(self._image_surf, wid.rect[:2], (wid.rect))
                 rect = wid.render(self._display_surf)
                 pygame.display.update(rect)
-            # pygame.display.update(wid.rect)
         ## black above and below fuel gauge
-        self._display_surf.fill((0,0,0), (WIDTH/2 - 175/2, 0, 175, 30))
+        rect = (WIDTH/2 - 175/2, 0, 175, 30)
+        self._display_surf.fill((0,0,0), rect)
+        pygame.display.update(rect)
         # self._display_surf.fill((0,0,0), (234, 50, 175, 30))
         # pygame.display.flip()
     def on_exit(self):
@@ -506,11 +522,13 @@ class Workout(cevent.CEvent):
     
         while( self._running and not self.done):
             self.on_render() ## only render once per second
-            for i in range(100): ## watch for events and updates
+            for i in range(10): ## watch for events and updates
                 self.on_loop()
+                clock.tick(60)
+
                 for event in pygame.event.get():
                     self.on_event(event)
-
+                    
         pygame.display.flip()
         font = pygame.font.Font(None, 48)
         text = font.render("Workout Complete!", 1, (255, 0, 0))

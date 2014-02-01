@@ -23,6 +23,9 @@ SPEED_PIN = "P8_10"
 CADENCE_PIN = "P8_9"
 PINS = [SPEED_PIN, CADENCE_PIN]
 
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 if BBB:
     for pin in PINS:
         GPIO.setup(pin, GPIO.IN)
@@ -323,7 +326,8 @@ class Progress(Widget):
             self.surf.fill(self.todo_color, (0, 0, self.rect[2], self.rect[3]))
             self.surf.fill(self.done_color, (0, 0, d, self.rect[3]))
             percent = "%.0f%%" % ((1 - value) * 100)
-            self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), (0, 0, 0))
+            color = (255, 255, 255)
+            self.add_text(percent, 20, (self.rect[2]/2, self.rect[3]/2), color)
 
 class Gauge(Widget):
     def __init__(self, parent, center, radius, angles, min_max_values, value=None, dial_width=10, dial_color=(0, 0, 255), inner_radius=30, colorkey=COLORKEY, *args, **kw):

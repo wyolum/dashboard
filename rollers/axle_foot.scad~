@@ -1,0 +1,20 @@
+$fn=150;
+mm = 1.;
+inch = 24.5 * mm;
+
+AXLE_R = 9 * mm / 2;
+GAP =.5 * mm;
+
+WIDTH = 1 * inch;
+SCREW_R = 3 * mm;
+
+BASE_H = 10 * mm;
+
+module base(){
+  difference(){
+    union(){
+    }
+    union(){
+    }
+  }
+}

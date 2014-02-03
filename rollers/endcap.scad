@@ -66,9 +66,9 @@ difference(){
     //color([1, 1, 1])translate([0, 0, RACE_H + BEARING_H])bearing();
     //color([1, 0, 1])translate([0, 0, 0])translate([0, 0, RACE_H - SLEEVE_H])sleeve();
   }
-  translate([-1 - ROLLER_R, -1, -1])cube([2 * ROLLER_R + 2, ROLLER_R + 1, TOTAL_H + 2]);
+  //translate([-1 - ROLLER_R, -1, -1])cube([2 * ROLLER_R + 2, ROLLER_R + 1, TOTAL_H + 2]);
 }
-color([1, 1, 1])translate([0, 0, RACE_H])bearing();
-color([1, 1, 1])translate([0, 0, RACE_H + BEARING_H])bearing();
-color([1, 0, 1])translate([0, 0, 0])translate([0, 0, RACE_H - SLEEVE_H])sleeve();
-translate([0, 0, -1*inch]) axle();
+//color([1, 1, 1])translate([0, 0, RACE_H])bearing();
+//color([1, 1, 1])translate([0, 0, RACE_H + BEARING_H])bearing();
+//color([1, 0, 1])translate([0, 0, 0])translate([0, 0, RACE_H - SLEEVE_H])sleeve();
+//translate([0, 0, -1*inch]) axle();

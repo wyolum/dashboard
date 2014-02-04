@@ -1,7 +1,7 @@
 include<axle_foot.scad>;
 $fn=150;
 mm = 1.;
-inch = 24.5 * mm;
+inch = 25.4 * mm;
 
 ROLLER_L = 24 * inch;
 ROLLER_R = 1.5 * inch;

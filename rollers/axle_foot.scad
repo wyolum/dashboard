@@ -1,6 +1,6 @@
 $fn=150;
 mm = 1.;
-inch = 24.5 * mm;
+inch = 25.4 * mm;
 
 AXLE_R = 8 * mm / 2;
 GAP =.5 * mm;

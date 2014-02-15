@@ -10,12 +10,13 @@ AXLE_D = 8 * mm;
 BELT_R = 5/2. * mm;
 TOTAL_H = 40 * mm;
 RACE_H = 10 * mm;
-BEARING_R = 11 * mm;
+BEARING_R = 11.2 * mm;
 BEARING_H = 7 * mm;
 WALL_T = 3 * mm;
 SLEEVE_OR = 10*mm / 2;
 SLEEVE_IR = 8*mm / 2;
 SLEEVE_H = 12*mm;
+ID_TOLERANCE = .1*mm;
 
 module bearing(){
   difference(){
@@ -35,7 +36,7 @@ module endcap(){
   translate([0, 0, 0 * inch])
   difference(){
     union(){
-      cylinder(h=TOTAL_H, r=ROLLER_R - ROLLER_T);
+      cylinder(h=TOTAL_H, r=ROLLER_R - ROLLER_T-ID_TOLERANCE);
       cylinder(h=RACE_H, r=ROLLER_R);
     }
     union(){

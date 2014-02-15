@@ -33,18 +33,20 @@ module sleeve(){
 }
 
 module endcap(){
-  translate([0, 0, 0 * inch])
-  difference(){
-    union(){
-      cylinder(h=TOTAL_H, r=ROLLER_R - ROLLER_T-ID_TOLERANCE);
-      cylinder(h=RACE_H, r=ROLLER_R);
+  intersection(){
+    difference(){
+      union(){
+	cylinder(h=TOTAL_H, r=ROLLER_R - ROLLER_T-ID_TOLERANCE);
+	cylinder(h=RACE_H, r=ROLLER_R);
+      }
+      union(){
+	translate([0, 0, -1])cylinder(h=RACE_H + 2 * BEARING_H, r=BEARING_R);
+	translate([0, 0, -1])cylinder(h=TOTAL_H + 1, r=AXLE_D/2. + 0.5*mm);
+	translate([0, 0, RACE_H/2])rotate_extrude(convexity = 10)translate([ROLLER_R + 1*mm, 0, 0])circle(r = BELT_R * mm, $fn = 100);
+	translate([0, 0, RACE_H + 2 * BEARING_H + WALL_T])cylinder(r1=AXLE_D / 2, r2 = ROLLER_R - WALL_T, h=TOTAL_H - (RACE_H + 2 * BEARING_H) - WALL_T + 1);
+      }
     }
-    union(){
-      translate([0, 0, -1])cylinder(h=RACE_H + 2 * BEARING_H, r=BEARING_R);
-      translate([0, 0, -1])cylinder(h=TOTAL_H + 1, r=AXLE_D/2. + 0.5*mm);
-      translate([0, 0, RACE_H/2])rotate_extrude(convexity = 10)translate([ROLLER_R + 1*mm, 0, 0])circle(r = BELT_R * mm, $fn = 100);
-      translate([0, 0, RACE_H + 2 * BEARING_H + WALL_T])cylinder(r1=AXLE_D / 2, r2 = ROLLER_R - WALL_T, h=TOTAL_H - (RACE_H + 2 * BEARING_H) - WALL_T + 1);
-    }
+    cylinder(r1 = 1.1 * ROLLER_R, r2 = ROLLER_R - 4 * mm, h=TOTAL_H);
   }
 }
 

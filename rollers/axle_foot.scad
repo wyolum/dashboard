@@ -3,10 +3,10 @@ mm = 1.;
 inch = 25.4 * mm;
 
 AXLE_R = 8 * mm / 2;
-GAP =.5 * mm;
+GAP =.15 * mm;
 
 WIDTH = 1 * inch;
-SCREW_R = .125 * inch;
+SCREW_R = .13 * inch;
 SCREW_SEP = 20 * mm;
 
 
@@ -49,5 +49,5 @@ module top(){
       }
     }
 }
-// translate([0, 0, 10])top();
-// base();
+translate([0, 0, 10])top();
+base();
